@@ -1,9 +1,13 @@
-import Home from "./pages/Home";
-import AllRoute from "./components/routes/routes";
+import { WalletProvider } from './components/context/WalletContext';
+import { ThemeProvider } from './components/context/ThemeContext';
+import AppRouter from './components/routes/routes';
 
-
-export default function App()  {
+export default function App() {
   return (
-    <AllRoute/>
+    <ThemeProvider>
+      <WalletProvider>
+        <AppRouter />
+      </WalletProvider>
+    </ThemeProvider>
   );
-};
+}
