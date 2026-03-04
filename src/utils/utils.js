@@ -30,6 +30,7 @@ export const handlePaste = async (setSecretKeyArray) => {
 };
 
 // Handles the "Next" button click
+// SECURITY: Never store seed phrase in plaintext localStorage
 export const handleNext = (secretKeyArray, inputRefs) => {
   const filledArray = secretKeyArray.map((word, index) => {
     const trimmedValue = inputRefs.current[index]?.value.trim() || "";
@@ -38,19 +39,19 @@ export const handleNext = (secretKeyArray, inputRefs) => {
 
   if (filledArray.every((val) => val == "")) {
     alert("Please fill all input fields");
-  } else {
-    const phrase = secretKeyArray;
-    localStorage.setItem("walletSeedPhrase", phrase);
-    // <WalletAuthentication/>
   }
+  // Seed phrase is only stored encrypted via WalletContext.saveNewWallet()
 };
 
+// SECURITY: Seed phrase generation no longer writes to localStorage in plaintext.
+// Use WalletContext.generateNewMnemonic() + saveNewWallet() instead.
 export const generateSeedPhrase = (setSeedPhrase, setView) => {
   setView("seedPhrase");
   const phrase = generateMnemonic();
   const words = phrase.split(" ");
   setSeedPhrase(words);
-  localStorage.setItem("walletSeedPhrase", phrase);
+  // REMOVED: localStorage.setItem("walletSeedPhrase", phrase);
+  // Seed is only encrypted and stored via WalletContext.saveNewWallet()
 };
 
 

@@ -17,7 +17,9 @@ function WalletCard({ walletIndex }) {
   ];
   const SolPath = `m/44'/501'/${walletIndex}'/0'`;
   const EthPath = `m/44'/60'/0'/0/${walletIndex}`;
-  const mnemonic = localStorage.getItem("walletSeedPhrase");
+  // SECURITY: Never read plaintext mnemonic from localStorage.
+  // This legacy component should use WalletContext instead.
+  const mnemonic = null; // DEPRECATED: was localStorage.getItem("walletSeedPhrase");
 
   const [activeToken, setActiveToken] = useState("ETH");
   const [wallet, setWallet] = useState({

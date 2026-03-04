@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { generateMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39';
 import { deriveSolanaKeypair } from '../../services/svm/util';
 import { deriveEthereumWallet } from '../../services/evm/util';
@@ -12,6 +12,12 @@ import {
     getWalletCount,
     clearWalletData,
 } from '../../utils/crypto';
+import {
+    startAutoLock,
+    stopAutoLock,
+    rateLimit,
+    resetRateLimit,
+} from '../../utils/security';
 
 const WalletContext = createContext(null);
 
@@ -22,8 +28,12 @@ export function WalletProvider({ children }) {
     const [walletCount, setWalletCountState] = useState(getWalletCount());
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [lockTimeout, setLockTimeout] = useState(5 * 60 * 1000); // 5 min default
 
     const isInitialized = hasEncryptedWallet();
+
+    // Auto-lock reference to the lock function
+    const lockRef = useRef(null);
 
     /**
      * Derive all wallets from mnemonic for all chains.
@@ -181,8 +191,15 @@ export function WalletProvider({ children }) {
 
     /**
      * Unlock an existing wallet with a password.
+     * Rate-limited: max 5 attempts per 60 seconds.
      */
     const unlock = useCallback(async (password) => {
+        // Rate limiting to prevent brute-force attacks
+        const rl = rateLimit('wallet_unlock', 5, 60_000);
+        if (!rl.allowed) {
+            throw new Error(`Too many attempts. Try again in ${rl.retryAfter} seconds.`);
+        }
+
         setIsLoading(true);
         setError(null);
         try {
@@ -197,6 +214,9 @@ export function WalletProvider({ children }) {
             const derived = await deriveAllWallets(decrypted, count);
             setWallets(derived);
             setIsUnlocked(true);
+
+            // Reset rate limit on successful unlock
+            resetRateLimit('wallet_unlock');
         } catch (err) {
             setError(err.message);
             throw err;
@@ -225,14 +245,30 @@ export function WalletProvider({ children }) {
     }, [mnemonic, walletCount, deriveAllWallets]);
 
     /**
-     * Lock the wallet — wipes in-memory mnemonic.
+     * Lock the wallet — wipes in-memory mnemonic and sensitive data.
      */
     const lock = useCallback(() => {
         setMnemonic(null);
         setWallets([]);
         setIsUnlocked(false);
         setError(null);
+        stopAutoLock();
     }, []);
+
+    // Keep lockRef updated so auto-lock can call the latest lock()
+    lockRef.current = lock;
+
+    // Start/stop auto-lock when unlock state changes
+    useEffect(() => {
+        if (isUnlocked) {
+            startAutoLock(() => {
+                if (lockRef.current) lockRef.current();
+            }, lockTimeout);
+        } else {
+            stopAutoLock();
+        }
+        return () => stopAutoLock();
+    }, [isUnlocked, lockTimeout]);
 
     /**
      * Reset everything — deletes all wallet data.
@@ -254,6 +290,7 @@ export function WalletProvider({ children }) {
         wallets,
         walletCount,
         mnemonic,
+        lockTimeout,
         generateNewMnemonic,
         saveNewWallet,
         createWallet,
@@ -263,6 +300,7 @@ export function WalletProvider({ children }) {
         lock,
         resetWallet,
         setError,
+        setLockTimeout,
     };
 
     return (
