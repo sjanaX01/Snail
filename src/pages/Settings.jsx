@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWallet } from '../components/context/WalletContext';
 import { Lock, Trash2, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import SnailHeading from '../components/ui/SnailHeading';
+import { secureCopy } from '../utils/security';
 
 export default function Settings() {
   const { lock, resetWallet, mnemonic } = useWallet();
@@ -20,7 +21,8 @@ export default function Settings() {
   const copySeedPhrase = async () => {
     if (!mnemonic) return;
     try {
-      await navigator.clipboard.writeText(mnemonic);
+      // SECURITY: Auto-clears clipboard after 60s
+      await secureCopy(mnemonic, 60_000);
       setCopiedSeed(true);
       setTimeout(() => setCopiedSeed(false), 2000);
     } catch { /* */ }

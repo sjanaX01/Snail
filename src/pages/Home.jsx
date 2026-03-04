@@ -5,6 +5,7 @@ import { getEthBalance, getSolBalance, getBtcBalance, getEthNfts, getSolNfts } f
 import WalletDashboard from '../components/WalletDashbord';
 import SnailHeading from '../components/ui/SnailHeading';
 import ReceiveModal from '../components/ui/ReceiveModal';
+import SendModal from '../components/ui/SendModal';
 
 const CHAIN_ICONS = {
   ETH: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
@@ -20,6 +21,7 @@ export default function Home() {
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(null);
   const [showReceive, setShowReceive] = useState(false);
+  const [showSend, setShowSend] = useState(false);
 
   const wallet = wallets[activeWalletIndex];
 
@@ -128,7 +130,10 @@ export default function Home() {
 
         {/* Action Buttons */}
         <div className="flex space-x-3 mb-6">
-          <button className="flex items-center space-x-2 px-6 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-900 dark:hover:bg-gray-200">
+          <button
+            onClick={() => setShowSend(true)}
+            className="flex items-center space-x-2 px-6 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-900 dark:hover:bg-gray-200"
+          >
             <Send className="w-4 h-4" />
             <span>Send</span>
           </button>
@@ -188,6 +193,16 @@ export default function Home() {
       {/* Receive Modal */}
       {showReceive && (
         <ReceiveModal wallet={wallet} onClose={() => setShowReceive(false)} />
+      )}
+
+      {/* Send Modal */}
+      {showSend && (
+        <SendModal
+          wallet={wallet}
+          balances={balances}
+          onClose={() => setShowSend(false)}
+          onSuccess={fetchBalances}
+        />
       )}
     </div>
   );
